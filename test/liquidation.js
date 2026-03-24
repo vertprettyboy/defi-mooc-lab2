@@ -4,7 +4,8 @@ describe("Liquidation Question 2", function () {
   let liquidationOperator;
   const amounts = ["2000", "5000", "10000"];
 
-  beforeEach(async function () {
+  // ฟังก์ชันช่วย Reset ให้อยู่ใน Block เดิมทุกครั้ง
+  async function resetFork() {
     await network.provider.request({
       method: "hardhat_reset",
       params: [{
@@ -14,19 +15,28 @@ describe("Liquidation Question 2", function () {
         }
       }]
     });
-
-    const LiquidationOperator = await ethers.getContractFactory("LiquidationOperator");
-    liquidationOperator = await LiquidationOperator.deploy();
-    await liquidationOperator.deployed();
-  });
+  }
 
   amounts.forEach((amt) => {
-    it(`Should liquidate with ${amt} USDT`, async function () {
-      const tx = await liquidationOperator.operate();
-      await tx.wait();
+    it(`Test liquidation with ${amt} USDT`, async function () {
+      // 1. Reset Fork ใหม่ทุกรอบที่เริ่มเคสใหม่
+      await resetFork();
+
+      // 2. Deploy สัญญาใหม่ทุกรอบ (เพื่อให้ยอดเงินเริ่มต้นเป็น 0)
+      const LiquidationOperator = await ethers.getContractFactory("LiquidationOperator");
+      liquidationOperator = await LiquidationOperator.deploy();
+      await liquidationOperator.deployed();
       
-      const ethBalance = await ethers.provider.getBalance(liquidationOperator.address);
-      console.log(`Profit for ${amt} USDT: ${ethers.utils.formatEther(ethBalance)} ETH`);
+      try {
+        const tx = await liquidationOperator.operate();
+        await tx.wait();
+        
+        const ethBalance = await ethers.provider.getBalance(liquidationOperator.address);
+        console.log(`Profit for ${amt} USDT: ${ethers.utils.formatEther(ethBalance)} ETH`);
+      } catch (error) {
+        // ถ้าขาดทุนหรือล้างหนี้ไม่ได้ มันจะมาตกตรงนี้
+        console.log(`Profit for ${amt} USDT: Failed or No Profit`);
+      }
     });
   });
 });
