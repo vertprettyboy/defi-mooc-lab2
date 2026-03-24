@@ -4,7 +4,7 @@ describe("Liquidation Question 2", function () {
   let liquidationOperator;
   const amounts = ["2000", "5000", "10000"];
 
-  // ฟังก์ชันช่วย Reset ให้อยู่ใน Block เดิมทุกครั้ง
+  // ฟังก์ชันช่วย Reset Fork ให้กลับไปที่บล็อกเดิมทุกครั้ง
   async function resetFork() {
     await network.provider.request({
       method: "hardhat_reset",
@@ -18,25 +18,22 @@ describe("Liquidation Question 2", function () {
   }
 
   amounts.forEach((amt) => {
-    it(`Test liquidation with ${amt} USDT`, async function () {
-      // 1. Reset Fork ใหม่ทุกรอบที่เริ่มเคสใหม่
+    it(`Should liquidate with ${amt} USDT`, async function () {
+      // 1. Reset ทุกอย่างใหม่หมดก่อนเริ่มเทสต์แต่ละเคส
       await resetFork();
 
-      // 2. Deploy สัญญาใหม่ทุกรอบ (เพื่อให้ยอดเงินเริ่มต้นเป็น 0)
+      // 2. Deploy สัญญาใหม่ทุกรอบ
       const LiquidationOperator = await ethers.getContractFactory("LiquidationOperator");
       liquidationOperator = await LiquidationOperator.deploy();
       await liquidationOperator.deployed();
+
+      // 3. รันการล้างหนี้
+      const tx = await liquidationOperator.operate();
+      await tx.wait();
       
-      try {
-        const tx = await liquidationOperator.operate();
-        await tx.wait();
-        
-        const ethBalance = await ethers.provider.getBalance(liquidationOperator.address);
-        console.log(`Profit for ${amt} USDT: ${ethers.utils.formatEther(ethBalance)} ETH`);
-      } catch (error) {
-        // ถ้าขาดทุนหรือล้างหนี้ไม่ได้ มันจะมาตกตรงนี้
-        console.log(`Profit for ${amt} USDT: Failed or No Profit`);
-      }
+      // 4. เช็กยอด ETH ในสัญญา (ที่เป็นกำไร)
+      const ethBalance = await ethers.provider.getBalance(liquidationOperator.address);
+      console.log(`Profit for ${amt} USDT: ${ethers.utils.formatEther(ethBalance)} ETH`);
     });
   });
 });
