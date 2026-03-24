@@ -68,7 +68,7 @@ interface IERC20 {
 
     /**
      * Transfers _value amount of tokens to address _to, and MUST fire the Transfer event.
-     * The function SHOULD throw if the message caller’s account balance does not have enough tokens to spend.
+     * The function SHOULD throw if the message caller's account balance does not have enough tokens to spend.
      * Lets msg.sender send pool tokens to an address.
      **/
     function transfer(address to, uint256 value) external returns (bool);
